@@ -11,7 +11,7 @@ path = "src/main.rs"
 name = "reimd"
 
 [dependencies]
-clap = { version = "4.6.0", features = ["derive"] }
+# clap = { version = "4.6.0", features = ["derive"] }
 derive_more = { version = "2.1.1", features = ["as_ref", "deref", "deref_mut", "from"] }
 filess = { version = "0.6.1", default-features = false, features = ["ogg"] }
 indicatif = "0.18.4"
