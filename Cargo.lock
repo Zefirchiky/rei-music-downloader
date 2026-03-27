@@ -1120,7 +1120,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "rei-music-downloader"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "derive_more",
  "filess",

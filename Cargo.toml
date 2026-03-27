@@ -1,6 +1,6 @@
 [package]
 name = "rei-music-downloader"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "A simple youtube music downloader with metadata and lyrics from `lrclib.net`"
 license = "MIT OR Apache-2.0"
