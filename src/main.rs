@@ -1,5 +1,9 @@
 use std::{
-    fmt::Display, fs::remove_dir, io::{self, Write}, thread::sleep, time::Duration
+    fmt::Display,
+    fs::remove_dir,
+    io::{self, Write},
+    thread::sleep,
+    time::Duration,
 };
 
 use filess::traits::FileTrait;
@@ -20,6 +24,7 @@ pub use yt_dlp::*;
 pub use yt_dlp_cli::*;
 
 pub const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏ ";
+pub const ARTIST_DIVIDER_CHARS: [char; 4] = ['&', '/', '|', ','];
 
 pub const SAVE_PATH: &str = "/home/rei/Music";
 
@@ -29,7 +34,11 @@ pub fn log_step(message: &str) {
     io::stdout().flush().unwrap();
 }
 
-fn get_with_select<T: Display + AsRef<str> + From<String> + Clone>(select: &str, options: Vec<T>, hint: &str) -> T {
+fn get_with_select<T: Display + AsRef<str> + From<String> + Clone>(
+    select: &str,
+    options: Vec<T>,
+    hint: &str,
+) -> T {
     let choice = if options.len() > 1 {
         Select::new(
             &format!("Select {select} (or best match to edit):"),
@@ -51,10 +60,6 @@ fn get_with_select<T: Display + AsRef<str> + From<String> + Clone>(select: &str,
 
 #[tokio::main]
 async fn main() {
-    let cmd = clap::Command::new("musd")
-        .about("Download music with metadata and cover from `YouTube`, and lyrics from `lrclib.net`")
-        .subcommand();
-    
     let prompt_string = Text::new("Enter the song name or URL:")
         .with_placeholder("e.g. Never Gonna Give You Up")
         .prompt()
@@ -80,7 +85,7 @@ async fn main() {
         let choice = Select::new("Select from available video:", searches)
             .prompt()
             .unwrap();
-        
+
         let mut title = choice.title.clone();
         while let Some((a, t)) = title.try_extract() {
             if !artist_candidates.contains(&a) {
@@ -103,13 +108,25 @@ async fn main() {
     let output = dlp.download(&url);
 
     let mut artist_hints = "Found artist(s): [".to_string();
-    artist_hints.push_str(&artist_candidates.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(", "));
+    artist_hints.push_str(
+        &artist_candidates
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+            .join(", "),
+    );
     artist_hints.push_str("]");
 
     let mut track_hints = "Found track(s): [".to_string();
-    track_hints.push_str(&track_candidates.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(", "));
+    track_hints.push_str(
+        &track_candidates
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+            .join(", "),
+    );
     track_hints.push_str("]");
-    
+
     let hints = vec![artist_hints, track_hints].join(", ");
     let artist = get_with_select("Artist", artist_candidates, &hints);
     let track = get_with_select("Name", track_candidates, &hints);
@@ -122,7 +139,7 @@ async fn main() {
         searches.push((Some(&artist), track.clone()));
         searches.push((None, track));
     }
-    
+
     let mut is_instrumental = false;
     for (a, t) in searches {
         let (url, results) = Lyrics::default().search(a, &t).await;
@@ -134,7 +151,7 @@ async fn main() {
             if let Some(choice) = choice {
                 if choice.instrumental {
                     is_instrumental = true;
-                    break
+                    break;
                 }
                 lyrics = choice.synced_lyrics.or(choice.plain_lyrics);
                 break; // Exit loop once lyrics are found
@@ -147,7 +164,10 @@ async fn main() {
             "Not found on lrclib. Search: https://lrclib.net/search/{} - {}",
             artist, track
         );
-        let search_string = Text::new("Search with name:").prompt_skippable().unwrap().map(|s| Track::new(&s));
+        let search_string = Text::new("Search with name:")
+            .prompt_skippable()
+            .unwrap()
+            .map(|s| Track::new(&s));
         if let Some(search_string) = search_string
             && !search_string.is_empty()
         {
@@ -157,7 +177,9 @@ async fn main() {
                 search_artist = Some(artist);
                 search_track = name
             }
-            let (url, results) = Lyrics::default().search(search_artist.as_ref(), &search_track).await;
+            let (url, results) = Lyrics::default()
+                .search(search_artist.as_ref(), &search_track)
+                .await;
 
             if !results.is_empty() {
                 let choice = inquire::Select::new(
@@ -174,10 +196,9 @@ async fn main() {
         }
     }
 
-    let file = output.file
-        .rename(&format!(
-            "{SAVE_PATH}/{artist} - {track}.opus"
-        ))
+    let file = output
+        .file
+        .rename(&format!("{SAVE_PATH}/{artist} - {track}.opus"))
         .unwrap();
     let song = Song {
         file,
