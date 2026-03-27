@@ -988,22 +988,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "music-downloader"
-version = "0.1.0"
-dependencies = [
- "clap",
- "derive_more",
- "filess",
- "indicatif",
- "inquire",
- "lofty",
- "regex",
- "reqwest",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "ogg_pager"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1247,6 +1231,22 @@ name = "regex-syntax"
 version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
+
+[[package]]
+name = "rei-music-downloader"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "derive_more",
+ "filess",
+ "indicatif",
+ "inquire",
+ "lofty",
+ "regex",
+ "reqwest",
+ "serde",
+ "tokio",
+]
 
 [[package]]
 name = "reqwest"
