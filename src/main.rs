@@ -71,7 +71,7 @@ async fn main() {
 
     let mut dlp = YtDlp::default();
     let url = if prompt_string.starts_with("http://") || prompt_string.starts_with("https://") {
-        prompt_string
+        prompt_string.clone()
     } else {
         let t1 = Track::new(&prompt_string);
         if let Some((a, t)) = t1.try_extract() {
@@ -106,6 +106,35 @@ async fn main() {
     };
 
     let output = dlp.download(&url);
+    if let Some(artist) = output.artist.clone()
+        && !artist_candidates.contains(&artist)
+    {
+        artist_candidates.push(artist)
+    }
+    if let Some(track) = output.track.clone()
+        && !track_candidates.contains(&track)
+    {
+        track_candidates.push(track)
+    }
+
+    if prompt_string.starts_with("http://") || prompt_string.starts_with("https://") {
+        let mut title = output.title.clone();
+        while let Some((a, t)) = title.try_extract() {
+            if !artist_candidates.contains(&a) {
+                artist_candidates.push(a);
+            }
+            if !track_candidates.contains(&t) {
+                track_candidates.push(t.clone());
+            }
+            title = t;
+        }
+        if !track_candidates.contains(&title) {
+            track_candidates.push(title);
+        }
+        if !artist_candidates.contains(&output.uploader) {
+            artist_candidates.push(output.uploader);
+        }
+    }
 
     let mut artist_hints = "Found artist(s): [".to_string();
     artist_hints.push_str(
