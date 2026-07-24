@@ -1,7 +1,5 @@
 use std::process::Command;
 
-use crate::SAVE_PATH;
-
 pub struct YtDlpCli {}
 
 impl YtDlpCli {
@@ -17,7 +15,7 @@ impl YtDlpCli {
         command
     }
         
-    pub fn setup_download_command() -> Command {
+    pub fn setup_download_command(dir: &str) -> Command {
         let mut command = Command::new("yt-dlp");
         Self::setup_env(&mut command);
         Self::setup_print(&mut command);
@@ -25,7 +23,7 @@ impl YtDlpCli {
         Self::setup_audio(&mut command);
         Self::setup_metadata(&mut command);
         Self::setup_cookie(&mut command);
-        Self::setup_output(&mut command);
+        Self::setup_output(&mut command, dir);
         command
     }
 
@@ -72,7 +70,7 @@ impl YtDlpCli {
         command.args(["--cookies-from-browser", "firefox:/home/rei/.config/zen"]);
     }
 
-    fn setup_output(command: &mut Command) {
-        command.args(["-o", &format!("{SAVE_PATH}/tmp/%(title)s TEMP.%(ext)s")]);
+    fn setup_output(command: &mut Command, dir: &str) {
+        command.args(["-o", &format!("{dir}/%(title)s TEMP.%(ext)s")]);
     }
 }

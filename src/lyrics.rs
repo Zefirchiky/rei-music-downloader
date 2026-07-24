@@ -3,7 +3,7 @@ use std::fmt::Display;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::{Artist, Track};
+use crate::components::Track;
 
 #[derive(Default)]
 pub struct Lyrics {
@@ -11,21 +11,41 @@ pub struct Lyrics {
 }
 
 impl Lyrics {
-    pub async fn search(
+    pub async fn search_with_query(
         &self,
-        artist: Option<&Artist>,
-        track: &Track,
+        query: &[(&str, &str)],
     ) -> (reqwest::Url, Vec<LyricsResponse>) {
-        let mut builder = self
+        let builder = self
             .client
             .get("https://lrclib.net/api/search")
-            .query(&[("track_name", track.as_str())]);
-        if let Some(a) = artist {
-            builder = builder.query(&[("artist_name", a.as_str())]);
-        }
-        let req = builder.send().await.unwrap();
+            .header(
+                "User-Agent",
+                format!(
+                    "Rei Music Downloader v{} (https://github.com/Zefirchiky/rei-music-downloader)",
+                    crate::VERSION
+                ),
+            )
+            .query(query);
 
-        (req.url().clone(), req.json().await.unwrap())
+        let req = builder.send().await.unwrap(); // FIXME: Remove unwrap
+
+        (req.url().clone(), req.json().await.unwrap()) // FIXME: Same here
+    }
+
+    pub async fn search_with_track_artist(
+        &self,
+        artist: Option<&String>,
+        track: &Track,
+    ) -> (reqwest::Url, Vec<LyricsResponse>) {
+        let mut query = vec![("track_name", track.as_str())];
+        if let Some(a) = artist {
+            query.push(("artist_name", a.as_str()));
+        }
+        self.search_with_query(&query).await
+    }
+
+    pub async fn search(&self, query: &str) -> (reqwest::Url, Vec<LyricsResponse>) {
+        self.search_with_query(&[("q", query)]).await
     }
 }
 

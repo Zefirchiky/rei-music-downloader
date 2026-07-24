@@ -4,8 +4,9 @@ use std::{
 
 use filess::Ogg;
 use indicatif::{ProgressBar, ProgressStyle};
+use tempfile::TempDir;
 
-use crate::{Artist, Track, YtDlpCli};
+use crate::{components::{Artist, Track}, YtDlpCli};
 
 #[derive(Debug)]
 pub struct SearchResult {
@@ -47,6 +48,7 @@ pub struct TrackInfo {
 
 pub struct YtDlp {
     pub command: Command,
+    pub temp_dir: TempDir,
 }
 
 impl YtDlp {
@@ -99,7 +101,7 @@ impl YtDlp {
         pb.finish_with_message("Download Complete");
 
         if !status.success() {
-            panic!("yt-dlp exited with an error");
+            panic!("yt-dlp exited with an error: {:?}", status);
         }
 
         if collected_lines.len() < 6 {
@@ -154,8 +156,10 @@ impl YtDlp {
 
 impl Default for YtDlp {
     fn default() -> Self {
+        let temp_dir = TempDir::new().unwrap();
         Self {
-            command: YtDlpCli::setup_download_command(),
+            command: YtDlpCli::setup_download_command(temp_dir.path().to_str().expect("Temp path should be chill")),
+            temp_dir,
         }
     }
 }
