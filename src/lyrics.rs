@@ -3,7 +3,7 @@ use std::fmt::Display;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::components::Track;
+use crate::components::Title;
 
 #[derive(Default)]
 pub struct Lyrics {
@@ -35,11 +35,11 @@ impl Lyrics {
     pub async fn search_with_track_artist(
         &self,
         artist: Option<&String>,
-        track: &Track,
+        track: &Title,
     ) -> (reqwest::Url, Vec<LyricsResponse>) {
         let mut query = vec![("track_name", track.as_str())];
         if let Some(a) = artist {
-            query.push(("artist_name", a.as_str()));
+            query.push(("artist_name", &a));
         }
         self.search_with_query(&query).await
     }
@@ -56,7 +56,7 @@ pub struct LyricsResponse {
     pub synced_lyrics: Option<String>,
     pub artist_name: String,
     pub track_name: String,
-    pub duration: f32,
+    pub duration: Option<f32>,
     pub instrumental: bool,
 }
 
@@ -72,8 +72,12 @@ impl Display for LyricsResponse {
         } else {
             ""
         };
-        let duration_min = (self.duration / 60.0).floor();
-        let duration_sec = (self.duration % 60.0).round();
+        
+        let (mut duration_min, mut duration_sec) = (0f32, 0f32);
+        if let Some(duration) = self.duration {
+            duration_min = (duration / 60.0).floor();
+            duration_sec = (duration % 60.0).round();
+        }
 
         write!(
             f,

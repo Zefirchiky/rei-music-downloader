@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::components::{Artist, Component, Remix, RemixArtist, Track};
+use crate::components::{Artist, Component, Remix, RemixArtist, Title};
 
 const SEPARATOR_REGEX: &str = r"(?i)\s*(?:[,+&\\|;]|\bx\b|\band\b)\s*";
 const BRACKET_TAG_REGEX: &str = r"[\(\[](.*?)[\)\]]";
@@ -9,7 +9,7 @@ const BRACKET_TAG_REGEX: &str = r"[\(\[](.*?)[\)\]]";
 pub struct ParsedTrack {
     pub artists: Vec<Artist>,
     pub remix_artists: Vec<RemixArtist>,
-    pub tracks: Vec<Track>,
+    pub tracks: Vec<Title>,
     pub remixes: Vec<Remix>,
 }
 
@@ -17,7 +17,7 @@ impl ParsedTrack {
     pub fn new(
         artists: Vec<Artist>,
         remix_artists: Vec<RemixArtist>,
-        tracks: Vec<Track>,
+        tracks: Vec<Title>,
         remixes: Vec<Remix>,
     ) -> Self {
         let mut s = Self {
@@ -30,11 +30,23 @@ impl ParsedTrack {
         s
     }
 
+    pub fn dedup_one<T: PartialEq + AsRef<str>>(l: Vec<T>) -> Vec<T> {
+        let mut seen = vec![];
+        let mut result = vec![];
+        for el in l {
+            if !seen.contains(&el.as_ref().to_lowercase()) {
+                seen.push(el.as_ref().to_lowercase());
+                result.push(el);
+            }
+        }
+        result
+    }
+
     pub fn dedup(&mut self) {
-        self.artists.dedup();
-        self.remix_artists.dedup();
-        self.tracks.dedup();
-        self.remixes.dedup();
+        self.artists = Self::dedup_one(self.artists.clone());
+        self.remix_artists = Self::dedup_one(self.remix_artists.clone());
+        self.tracks = Self::dedup_one(self.tracks.clone());
+        self.remixes = Self::dedup_one(self.remixes.clone());
     }
 }
 
@@ -67,7 +79,7 @@ impl Parser {
     }
 
     /// Helper function to split artist lists on common delimiters: ',', '&', or ' x '
-    fn split_list<T: Component>(text: &str) -> Vec<T> {
+    pub fn split_list<T: Component>(text: &str) -> Vec<T> {
         let delim_re = Regex::new(SEPARATOR_REGEX).unwrap();
         delim_re
             .split(text)
@@ -90,12 +102,11 @@ impl Parser {
         // Take all sections except the last one (which contains song name & tags)
         let artist_sections = &parts[..parts.len() - 1];
 
-        let mut artists: Vec<Artist> = artist_sections
+        let artists: Vec<Artist> = artist_sections
             .iter()
             .flat_map(|section| Self::split_list(section))
             .collect();
 
-        artists.dedup();
         artists
     }
 
@@ -105,7 +116,7 @@ impl Parser {
         // Matches content inside () or []
         let tag_re = Regex::new(BRACKET_TAG_REGEX).unwrap();
         // Matches "feat. X", "ft. X", or "X Remix"
-        let ft_re = Regex::new(r"(?i)^(?:feat\.?|ft\.?)\s*(.+)$").unwrap();
+        let ft_re = Regex::new(r"(?i)^(?:feat\.?|ft\.?|with\b)\s*(.+)$").unwrap();
         let remix_artist_re = Regex::new(r"(?i)^(.+?)\s+remix$").unwrap();
 
         let mut remix_artists = Vec::new();
@@ -120,7 +131,6 @@ impl Parser {
             }
         }
 
-        remix_artists.dedup();
         remix_artists
     }
 
@@ -128,37 +138,12 @@ impl Parser {
     /// Matches audio edits like "Slowed", "Reverb", "Sped Up", "Nightcore", etc.
     pub fn extract_remixes(input: &str) -> Vec<Remix> {
         let tag_re = Regex::new(BRACKET_TAG_REGEX).unwrap();
-        // Sub-split tags separated by '&', '+', or ',' inside brackets
-
-        // Comprehensive list of common remix/audio-style keywords
-        let edit_keywords = [
-            "slowed",
-            "over slowed",
-            "reverb",
-            "sped up",
-            "over sped up",
-            "spedup",
-            "over spedup",
-            "nightcore",
-            "daycore",
-            "8d",
-            "8d audio",
-            "instrumental",
-            "acoustic",
-            "bass boosted",
-            "vip",
-            "extended mix",
-            "club mix",
-            "edit",
-            "radio edit",
-        ];
 
         let mut remixes = Vec::new();
 
         for cap in tag_re.captures_iter(input) {
             let content = cap[1].trim();
 
-            // Ignore featuring tags
             if content.to_lowercase().starts_with("feat")
                 || content.to_lowercase().starts_with("ft")
             {
@@ -169,19 +154,18 @@ impl Parser {
             for sub_tag in Self::split_list::<Remix>(content) {
                 let lower_tag = sub_tag.to_lowercase();
 
-                if edit_keywords.iter().any(|&k| lower_tag.contains(k)) {
+                if crate::REMIX_KEYWORDS.iter().any(|&k| lower_tag.contains(k)) {
                     remixes.push(Remix::new(&lower_tag));
                 }
             }
         }
 
-        remixes.dedup();
         remixes
     }
 
     /// EXTRACT SONG NAME
     /// Extracts the last main segment before tags, stripping away () and [] metadata.
-    pub fn extract_titles(input: &str) -> Vec<Track> {
+    pub fn extract_titles(input: &str) -> Vec<Title> {
         let main_dash_re = Regex::new(r"\s+-\s+").unwrap();
         let parts: Vec<&str> = main_dash_re.split(input).collect();
 
@@ -194,17 +178,16 @@ impl Parser {
 
         let strip_tags_re = Regex::new(r"\s*[\(\[][^\)\]]*[\)\]]").unwrap();
 
-        let mut names: Vec<Track> = raw_name_sections
+        let names: Vec<Title> = raw_name_sections
             .iter()
             .map(|section| {
                 // Strip out bracketed and parenthesized metadata
                 let cleaned = strip_tags_re.replace_all(section, "");
-                Track::new(&cleaned.trim())
+                Title::new(&cleaned.trim())
             })
             .filter(|t| !t.is_empty())
             .collect();
 
-        names.dedup();
         names
     }
 }
@@ -213,19 +196,15 @@ impl Parser {
 mod tests {
     use super::*;
 
+    // #[test]
+    // fn extract() {
+    //     let input = "Twenty One Pilots - Nico And The Niners (macistrala Remix) [8D AUDIO]";
+    //     let _artists = dbg!(Parser::extract_remixes(input.into()));
+    // }
+    
     #[test]
     fn extract_artists() {
         let input = "NoCopyrightSounds - artist1 & artist 2, artist 3 - name of the song";
-        let artists = Parser::extract_artists(input);
-        assert_eq!(
-            artists,
-            vec!["NoCopyrightSounds", "artist1", "artist 2", "artist 3"]
-        );
-    }
-
-    #[test]
-    fn extract_artists_dedup() {
-        let input = "NoCopyrightSounds - artist1 & artist 2, artist 2, artist 3 - name of the song";
         let artists = Parser::extract_artists(input);
         assert_eq!(
             artists,

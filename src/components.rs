@@ -10,7 +10,7 @@ macro_rules! create_component {
     ($name:ident) => {        
         #[derive(Debug, Clone, PartialEq, AsRef, Deref, DerefMut, Deserialize)]
         #[as_ref(str)]
-        pub struct $name(String);
+        pub struct $name(pub String);
         
         impl $name {
             pub fn new(name: &impl AsRef<str>) -> Self {
@@ -86,9 +86,9 @@ impl Display for ArtistOrRemixArtist {
     }
 }
 
-create_component!(Track);
+create_component!(Title);
 
-impl Display for Track {
+impl Display for Title {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
     }
@@ -98,6 +98,6 @@ create_component!(Remix);
 
 impl Display for Remix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.0.to_uppercase())
     }
 }

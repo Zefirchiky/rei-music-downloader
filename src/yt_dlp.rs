@@ -6,12 +6,12 @@ use filess::Ogg;
 use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::TempDir;
 
-use crate::{components::{Artist, Track}, YtDlpCli};
+use crate::{components::{Artist, Title}, YtDlpCli};
 
 #[derive(Debug)]
 pub struct SearchResult {
     pub uploader: Artist,
-    pub title: Track,
+    pub title: Title,
     pub url: String,
     pub duration: usize,
 }
@@ -40,8 +40,8 @@ impl Display for SearchResult {
 pub struct TrackInfo {
     pub artist: Option<Artist>,
     pub uploader: Artist,      // Fallback for "author"
-    pub track: Option<Track>, // Specific song name if available
-    pub title: Track,
+    pub track: Option<Title>, // Specific song name if available
+    pub title: Title,
     pub file: Ogg,
     pub url: String,
 }
